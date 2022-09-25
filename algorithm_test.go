@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -22,19 +20,14 @@ func Test_aes_ecb_encrypt(t *testing.T) {
 		panic(err)
 	}
 
-	aesCipher, err := aes.NewCipher(key)
+	bc, err := NewBlockCipher("AES", key, 128, "CBC", iv)
 	if err != nil {
 		panic(err)
 	}
-	bm := cipher.NewCBCEncrypter(aesCipher, iv)
-
-	ca := CryptoAlgorithm{
-		id:             "AES_128_CBC",
-		BlockEncrypter: bm,
+	result, err := bc.encrypt(data)
+	if err != nil {
+		panic(err)
 	}
-
-	result := make([]byte, 16*4)
-	ca.BlockEncrypter.CryptBlocks(result, data)
 	hexResult := hex.EncodeToString(result)
 
 	expectedResult := "c30e32ffedc0774e6aff6af0869f71aa0f3af07a9a31a9c684db207eb0ef8e4e35907aa632c3ffdf868bb7b29d3d46ad83ce9f9a102ee99d49a53e87f4c3da55"

@@ -79,12 +79,11 @@ func (envelope *Envelope) encrypt(ph2 string, data []byte) (result []byte, err e
 
 	encryptedData, err := envelope.phase2.encrypt(data)
 
-	metadata := append([]byte(envelope.phase1.getID()), envelope.phase1.getIV()...)
-	metadata = append(metadata, []byte(envelope.phase2.getID())...)
+	metadata := append([]byte(envelope.phase1.getID()+"\000"), envelope.phase1.getIV()...)
+	metadata = append(metadata, []byte(envelope.phase2.getID()+"\000")...)
 	metadata = append(metadata, encryptedPh2Key...)
 	metadata = append(metadata, envelope.phase2.getIV()...)
 
 	result = append(metadata, encryptedData...)
 	return
-
 }

@@ -22,7 +22,7 @@ func NewBlockCipher(cipherName string, key []byte, blockSize int, blockMode stri
 		return
 	}
 	if iv == nil {
-		iv = getRandomBlock(blockSize)
+		iv = getRandomBlock(blockSize / 8)
 	}
 	blockModeEncrypter, err := parseBlockModeEncrypter(blockMode, block, iv)
 	if err != nil {

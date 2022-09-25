@@ -26,6 +26,18 @@ func main() {
 	if *optDecrypt {
 		fmt.Println("Decrypt")
 	}
+
+	dat, err := os.ReadFile(*optInputFile)
+	if err != nil {
+		panic("cant open file: " + err.Error())
+
+	}
+
+	if !*optDecrypt {
+		envelope, _ := NewEnvelope(*optPh1Alg, []byte(*optKEK))
+		result, _ := envelope.encrypt(*optPh2Alg, dat)
+		fmt.Print(result)
+	}
 }
 
 // func main() {
