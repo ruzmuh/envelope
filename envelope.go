@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 type phaseParameterSet struct {
@@ -18,8 +20,6 @@ type Envelope struct {
 	phase2        Encrypter
 	plainData     []byte
 	encryptedData []byte
-	plainDEK      []byte
-	plainKEK      []byte
 	encryptedDEK  []byte
 }
 
@@ -34,6 +34,21 @@ func NewEnvelope(ph1 string, ph1key []byte) (result Envelope, err error) {
 		return
 	}
 	return
+}
+
+func (m *Envelope) MarshalCBOR() (data []byte, err error) {
+	t := struct {
+		Phase1        Encrypter
+		Phase2        Encrypter
+		EncryptedDEK  []byte
+		EncryptedData []byte
+	}{
+		Phase1:        m.phase1,
+		Phase2:        m.phase2,
+		EncryptedDEK:  m.encryptedDEK,
+		EncryptedData: m.encryptedData,
+	}
+	return cbor.Marshal(t)
 }
 
 func parsePhaseString(phase string) (result phaseParameterSet, err error) {
@@ -67,7 +82,7 @@ func (envelope *Envelope) encrypt(ph2 string, data []byte) (result []byte, err e
 	if err != nil {
 		return
 	}
-	encryptedPh2Key, err := envelope.phase1.encrypt(ph2Key)
+	envelope.encryptedDEK, err = envelope.phase1.encrypt(ph2Key)
 	if err != nil {
 		return
 	}
@@ -77,13 +92,12 @@ func (envelope *Envelope) encrypt(ph2 string, data []byte) (result []byte, err e
 		return
 	}
 
-	encryptedData, err := envelope.phase2.encrypt(data)
-
-	metadata := append([]byte(envelope.phase1.getID()+"\000"), envelope.phase1.getIV()...)
-	metadata = append(metadata, []byte(envelope.phase2.getID()+"\000")...)
-	metadata = append(metadata, encryptedPh2Key...)
-	metadata = append(metadata, envelope.phase2.getIV()...)
-
-	result = append(metadata, encryptedData...)
+	envelope.encryptedData, err = envelope.phase2.encrypt(data)
+	if err != nil {
+		return
+	}
+	envelope.plainData = data
+	result, err = cbor.Marshal(*envelope)
+	fmt.Print(string(result))
 	return
 }

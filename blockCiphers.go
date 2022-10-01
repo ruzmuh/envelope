@@ -5,6 +5,8 @@ import (
 	"crypto/cipher"
 	"fmt"
 	"strings"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 type BlockEncrypter struct {
@@ -94,4 +96,15 @@ func parseBlockModeDecrypter(modeName string, block cipher.Block, iv []byte) (bl
 		err = fmt.Errorf("unknown block mode %v", blockMode)
 	}
 	return
+}
+
+func (m *BlockEncrypter) MarshalCBOR() (data []byte, err error) {
+	t := struct {
+		Id string
+		Iv []byte
+	}{
+		Id: m.id,
+		Iv: m.iv,
+	}
+	return cbor.Marshal(t)
 }
