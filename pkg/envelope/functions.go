@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func parseBlockCipher(blockCipherName string, key []byte) (block cipher.Block, err error) {
@@ -65,4 +67,25 @@ func getRandomBlock(bytesBlockSize int) (result []byte) {
 	result = make([]byte, bytesBlockSize)
 	rand.Read(result)
 	return
+}
+
+func padOneAndZeroes(blockSizeInBytes int, data []byte) (result []byte) {
+	log.Info("padding OneAndZeroes")
+	lastBlockLength := len(data) % blockSizeInBytes
+	log.Infof("lastblock size=%v bytes, let's put padding %v bytes", lastBlockLength, blockSizeInBytes-lastBlockLength)
+	padding := make([]byte, blockSizeInBytes-lastBlockLength)
+	padding[0] = 0x80
+	result = append(data, padding...)
+	return result
+}
+
+func stripOneAndZeroes(blockSizeInBytes int, data []byte) (result []byte, err error) {
+	log.Info("striping OneAndZeroes")
+	for i := len(data) - 1; i >= 0; i-- {
+		if data[i] == 0x80 {
+			result = data[:i]
+			return
+		}
+	}
+	return data, nil
 }

@@ -21,15 +21,13 @@ func NewBlockCipher(cipherName string, blockSize int, blockMode string) (result 
 	return
 }
 
-func (be *BlockEncrypter) getID() string {
-	return be.id
-}
-
 func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
+
 	phParam, err := parsePhaseString(be.id)
 	if err != nil {
 		return
 	}
+	padedData := padOneAndZeroes(phParam.blockSize/8, data)
 	block, err := parseBlockCipher(phParam.alg, key)
 	if err != nil {
 		return
@@ -38,8 +36,8 @@ func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 	if err != nil {
 		return
 	}
-	result = make([]byte, len(data))
-	bm.CryptBlocks(result, data)
+	result = make([]byte, len(padedData))
+	bm.CryptBlocks(result, padedData)
 	return
 }
 
@@ -48,6 +46,7 @@ func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
 	if err != nil {
 		return
 	}
+
 	block, err := parseBlockCipher(phParam.alg, key)
 	if err != nil {
 		return
@@ -58,6 +57,7 @@ func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
 	}
 	result = make([]byte, len(data))
 	bm.CryptBlocks(result, data)
+	result, err = stripOneAndZeroes(phParam.blockSize/8, result)
 	return
 }
 
