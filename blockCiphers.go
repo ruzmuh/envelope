@@ -42,6 +42,7 @@ func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 	bm.CryptBlocks(result, data)
 	return
 }
+
 func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
 	phParam, err := parsePhaseString(be.id)
 	if err != nil {
