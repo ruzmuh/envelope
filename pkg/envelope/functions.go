@@ -70,9 +70,8 @@ func getRandomBlock(bytesBlockSize int) (result []byte) {
 }
 
 func padOneAndZeroes(blockSizeInBytes int, data []byte) (result []byte) {
-	log.Info("padding OneAndZeroes")
 	lastBlockLength := len(data) % blockSizeInBytes
-	log.Infof("lastblock size=%v bytes, let's put padding %v bytes", lastBlockLength, blockSizeInBytes-lastBlockLength)
+	log.Infof("lastblock size=%v bytes, let's put pad %v bytes", lastBlockLength, blockSizeInBytes-lastBlockLength)
 	padding := make([]byte, blockSizeInBytes-lastBlockLength)
 	padding[0] = 0x80
 	result = append(data, padding...)

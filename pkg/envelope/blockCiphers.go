@@ -20,7 +20,9 @@ func NewBlockCipher(cipherName string, blockSize int, blockMode string) (result 
 	}
 	return
 }
-
+func (be *BlockEncrypter) getID() string {
+	return be.id
+}
 func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 
 	phParam, err := parsePhaseString(be.id)

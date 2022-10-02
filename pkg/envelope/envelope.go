@@ -2,6 +2,7 @@ package envelope
 
 import (
 	"github.com/fxamacker/cbor/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type phaseParameterSet struct {
@@ -17,6 +18,7 @@ type Envelope struct {
 }
 
 func NewEnvelope(ph1 string) (result Envelope, err error) {
+	log.Infof("Creating a new envelope with ph1=%s", ph1)
 	ph1params, err := parsePhaseString(ph1)
 	if err != nil {
 		return
@@ -93,15 +95,17 @@ func (m *Envelope) UnmarshalCBOR(data []byte) (err error) {
 }
 
 func (envelope *Envelope) Encrypt(ph1key []byte, ph2 string, data []byte) (result []byte, err error) {
+	log.Infof("Encrypting data with ph2=%s", ph2)
 	ph2params, err := parsePhaseString(ph2)
 	if err != nil {
 		return
 	}
-
+	log.Infof("Generating phase2 random key with size=%v", ph2params.blockSize)
 	ph2Key := getRandomBlock(ph2params.blockSize / 8)
 	if err != nil {
 		return
 	}
+	log.Infof("Encrypting KEK with ph1 key")
 	envelope.encryptedDEK, err = envelope.phase1.encrypt(ph1key, ph2Key)
 	if err != nil {
 		return
@@ -111,27 +115,29 @@ func (envelope *Envelope) Encrypt(ph1key []byte, ph2 string, data []byte) (resul
 	if err != nil {
 		return
 	}
-
+	log.Infof("Encrypting data with ph2 key")
 	envelope.encryptedData, err = envelope.phase2.encrypt(ph2Key, data)
 	if err != nil {
 		return
 	}
+	log.Infof("Marshaling envelope")
 	result, err = cbor.Marshal(*envelope)
 	return
 }
 
 func Decrypt(ph1key []byte, encryptedContainer []byte) (result []byte, err error) {
 	envelope := Envelope{}
-
+	log.Infof("Unmarshaling envelope")
 	err = cbor.Unmarshal(encryptedContainer, &envelope)
 	if err != nil {
 		return
 	}
-
+	log.Infof("Decrypting KEK with ph1 key")
 	plainDEK, err := envelope.phase1.decrypt(ph1key, envelope.encryptedDEK)
 	if err != nil {
 		return
 	}
+	log.Infof("Decrypting data with ph2=%s", envelope.phase2.getID())
 	result, err = envelope.phase2.decrypt(plainDEK, envelope.encryptedData)
 	return
 }
