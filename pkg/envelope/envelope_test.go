@@ -2,7 +2,6 @@ package envelope
 
 import (
 	"encoding/hex"
-	"fmt"
 	"testing"
 )
 
@@ -17,7 +16,6 @@ func TestNewEnvelope(t *testing.T) {
 	}
 	envelope, _ := NewEnvelope("AES_128_CBC")
 	encrypted, _ := envelope.Encrypt(key, "AES_128_CBC", data)
-	fmt.Print(string(encrypted))
 
 	decrypted, e := Decrypt(key, encrypted)
 	if e != nil {
