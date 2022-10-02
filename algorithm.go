@@ -2,8 +2,8 @@ package main
 
 type Encrypter interface {
 	getID() string
-	getIV() []byte
-	encrypt(data []byte) (result []byte, err error)
-	decrypt(data []byte) (result []byte, err error)
+	encrypt(key, data []byte) (result []byte, err error)
+	decrypt(key, data []byte) (result []byte, err error)
 	MarshalCBOR() (data []byte, err error)
+	UnmarshalCBOR(data []byte) (err error)
 }

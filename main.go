@@ -34,8 +34,8 @@ func main() {
 	}
 
 	if !*optDecrypt {
-		envelope, _ := NewEnvelope(*optPh1Alg, []byte(*optKEK))
-		result, _ := envelope.encrypt(*optPh2Alg, dat)
+		envelope, _ := NewEnvelope(*optPh1Alg)
+		result, _ := envelope.encrypt([]byte(*optKEK), *optPh2Alg, dat)
 		fmt.Print(result)
 	}
 }

@@ -15,16 +15,16 @@ func Test_aes_ecb_encrypt(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	iv, err := hex.DecodeString("8ce82eefbea0da3c44699ed7db51b7d9")
-	if err != nil {
-		panic(err)
-	}
+	// iv, err := hex.DecodeString("8ce82eefbea0da3c44699ed7db51b7d9")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	bc, err := NewBlockCipher("AES", key, 128, "CBC", iv)
+	bc, err := NewBlockCipher("AES", 128, "CBC")
 	if err != nil {
 		panic(err)
 	}
-	result, err := bc.encrypt(data)
+	result, err := bc.encrypt(key, data)
 	if err != nil {
 		panic(err)
 	}

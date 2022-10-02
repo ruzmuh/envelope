@@ -15,8 +15,14 @@ func TestNewEnvelope(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	envelope, _ := NewEnvelope("AES_128_CBC", key)
-	result, _ := envelope.encrypt("AES_128_CBC", data)
-	fmt.Print(result)
+	envelope, _ := NewEnvelope("AES_128_CBC")
+	result, _ := envelope.encrypt(key, "AES_128_CBC", data)
+	fmt.Print(string(result))
+
+	r, e := decrypt(key, result)
+	if e != nil {
+		return
+	}
+	fmt.Print(hex.EncodeToString(r))
 
 }

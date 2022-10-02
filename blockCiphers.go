@@ -1,46 +1,22 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"fmt"
-	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 )
 
 type BlockEncrypter struct {
-	id             string
-	keySize        int
-	iv             []byte
-	block          cipher.Block
-	BlockEncrypter cipher.BlockMode
-	BlockDecrypter cipher.BlockMode
+	id      string
+	keySize int
+	iv      []byte
 }
 
-func NewBlockCipher(cipherName string, key []byte, blockSize int, blockMode string, iv []byte) (result *BlockEncrypter, err error) {
-	block, err := parseBlockCipher(cipherName, key)
-	if err != nil {
-		return
-	}
-	if iv == nil {
-		iv = getRandomBlock(blockSize / 8)
-	}
-	blockModeEncrypter, err := parseBlockModeEncrypter(blockMode, block, iv)
-	if err != nil {
-		return
-	}
-	blockModeDecrypter, err := parseBlockModeDecrypter(blockMode, block, iv)
-	if err != nil {
-		return
-	}
+func NewBlockCipher(cipherName string, blockSize int, blockMode string) (result *BlockEncrypter, err error) {
 	result = &BlockEncrypter{
-		id:             fmt.Sprintf("%s_%v_%s", cipherName, len(key)*8, blockMode),
-		keySize:        len(key) * 8,
-		iv:             iv,
-		block:          block,
-		BlockEncrypter: blockModeEncrypter,
-		BlockDecrypter: blockModeDecrypter,
+		id:      fmt.Sprintf("%s_%v_%s", cipherName, blockSize, blockMode),
+		keySize: blockSize,
+		iv:      getRandomBlock(blockSize / 8),
 	}
 	return
 }
@@ -49,62 +25,67 @@ func (be *BlockEncrypter) getID() string {
 	return be.id
 }
 
-func (be *BlockEncrypter) getIV() []byte {
-	return be.iv
-}
-func (be *BlockEncrypter) encrypt(data []byte) (result []byte, err error) {
+func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
+	phParam, err := parsePhaseString(be.id)
+	if err != nil {
+		return
+	}
+	block, err := parseBlockCipher(phParam.alg, key)
+	if err != nil {
+		return
+	}
+	bm, err := parseBlockModeEncrypter(phParam.mode, block, be.iv)
+	if err != nil {
+		return
+	}
 	result = make([]byte, len(data))
-	be.BlockEncrypter.CryptBlocks(result, data)
+	bm.CryptBlocks(result, data)
 	return
 }
-func (be *BlockEncrypter) decrypt(data []byte) (result []byte, err error) {
+func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
+	phParam, err := parsePhaseString(be.id)
+	if err != nil {
+		return
+	}
+	block, err := parseBlockCipher(phParam.alg, key)
+	if err != nil {
+		return
+	}
+	bm, err := parseBlockModeDecrypter(phParam.mode, block, be.iv)
+	if err != nil {
+		return
+	}
 	result = make([]byte, len(data))
-	be.BlockDecrypter.CryptBlocks(result, data)
-	return
-}
-
-func parseBlockCipher(blockCipherName string, key []byte) (block cipher.Block, err error) {
-	blockCipherName = strings.ToUpper(blockCipherName)
-	switch blockCipherName {
-	case "AES":
-		block, err = aes.NewCipher(key)
-		return
-	default:
-		return nil, fmt.Errorf("unknown cipher %v", blockCipherName)
-	}
-}
-
-func parseBlockModeEncrypter(modeName string, block cipher.Block, iv []byte) (blockMode cipher.BlockMode, err error) {
-	modeName = strings.ToUpper(modeName)
-	switch modeName {
-	case "CBC":
-		blockMode = cipher.NewCBCEncrypter(block, iv)
-		return
-	default:
-		err = fmt.Errorf("unknown block mode %v", blockMode)
-	}
-	return
-}
-
-func parseBlockModeDecrypter(modeName string, block cipher.Block, iv []byte) (blockMode cipher.BlockMode, err error) {
-	modeName = strings.ToUpper(modeName)
-	switch modeName {
-	case "CBC":
-		blockMode = cipher.NewCBCDecrypter(block, iv)
-		return
-	default:
-		err = fmt.Errorf("unknown block mode %v", blockMode)
-	}
+	bm.CryptBlocks(result, data)
 	return
 }
 
 func (m *BlockEncrypter) MarshalCBOR() (data []byte, err error) {
 	t := struct {
-		Id string
-		Iv []byte
+		Id      string
+		KeySize int
+		Iv      []byte
 	}{
-		Id: m.id,
-		Iv: m.iv,
+		Id:      m.id,
+		KeySize: m.keySize,
+		Iv:      m.iv,
 	}
 	return cbor.Marshal(t)
+}
+
+func (m *BlockEncrypter) UnmarshalCBOR(data []byte) (err error) {
+	var t struct {
+		Id      string
+		KeySize int
+		Iv      []byte
+	}
+	if err := cbor.Unmarshal(data, &t); err != nil {
+		return err
+	}
+	*m = BlockEncrypter{
+		id:      t.Id,
+		keySize: t.KeySize,
+		iv:      t.Iv,
+	}
+	return
 }

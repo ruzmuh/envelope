@@ -1,12 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -18,18 +12,17 @@ type phaseParameterSet struct {
 type Envelope struct {
 	phase1        Encrypter
 	phase2        Encrypter
-	plainData     []byte
 	encryptedData []byte
 	encryptedDEK  []byte
 }
 
-func NewEnvelope(ph1 string, ph1key []byte) (result Envelope, err error) {
+func NewEnvelope(ph1 string) (result Envelope, err error) {
 	ph1params, err := parsePhaseString(ph1)
 	if err != nil {
 		return
 	}
 
-	result.phase1, err = NewBlockCipher(ph1params.alg, ph1key, ph1params.blockSize, ph1params.mode, nil)
+	result.phase1, err = NewBlockCipher(ph1params.alg, ph1params.blockSize, ph1params.mode)
 	if err != nil {
 		return
 	}
@@ -51,28 +44,55 @@ func (m *Envelope) MarshalCBOR() (data []byte, err error) {
 	return cbor.Marshal(t)
 }
 
-func parsePhaseString(phase string) (result phaseParameterSet, err error) {
-	ph1Slice := strings.Split(phase, "_")
-	if len(ph1Slice) != 3 {
-		err = fmt.Errorf("phase 1 string is %s, must be ALG_SIZE_MODE", phase)
+func (m *Envelope) UnmarshalCBOR(data []byte) (err error) {
+	var t struct {
+		Phase1 struct {
+			Id string
+		}
+		Phase2 struct {
+			Id string
+		}
 	}
-	result.alg = ph1Slice[0]
-	result.blockSize, err = strconv.Atoi(ph1Slice[1])
+	if err := cbor.Unmarshal(data, &t); err != nil {
+		return err
+	}
+
+	var envelope struct {
+		Phase1        Encrypter
+		Phase2        Encrypter
+		EncryptedDEK  []byte
+		EncryptedData []byte
+	}
+
+	ph1, err := parsePhaseString(t.Phase1.Id)
 	if err != nil {
 		return
 	}
-	result.mode = ph1Slice[2]
+	if ph1.alg == "AES" {
+		envelope.Phase1 = &BlockEncrypter{}
+	}
+
+	ph2, err := parsePhaseString(t.Phase2.Id)
+	if err != nil {
+		return
+	}
+	if ph2.alg == "AES" {
+		envelope.Phase2 = &BlockEncrypter{}
+	}
+
+	if err := cbor.Unmarshal(data, &envelope); err != nil {
+		return err
+	}
+	*m = Envelope{
+		phase1:        envelope.Phase1,
+		phase2:        envelope.Phase2,
+		encryptedData: envelope.EncryptedData,
+		encryptedDEK:  envelope.EncryptedDEK,
+	}
 	return
 }
 
-func getRandomBlock(bytesBlockSize int) (result []byte) {
-	rand.Seed(time.Now().UnixNano())
-	result = make([]byte, bytesBlockSize)
-	rand.Read(result)
-	return
-}
-
-func (envelope *Envelope) encrypt(ph2 string, data []byte) (result []byte, err error) {
+func (envelope *Envelope) encrypt(ph1key []byte, ph2 string, data []byte) (result []byte, err error) {
 	ph2params, err := parsePhaseString(ph2)
 	if err != nil {
 		return
@@ -82,22 +102,36 @@ func (envelope *Envelope) encrypt(ph2 string, data []byte) (result []byte, err e
 	if err != nil {
 		return
 	}
-	envelope.encryptedDEK, err = envelope.phase1.encrypt(ph2Key)
+	envelope.encryptedDEK, err = envelope.phase1.encrypt(ph1key, ph2Key)
 	if err != nil {
 		return
 	}
 
-	envelope.phase2, err = NewBlockCipher(ph2params.alg, ph2Key, ph2params.blockSize, ph2params.mode, nil)
+	envelope.phase2, err = NewBlockCipher(ph2params.alg, ph2params.blockSize, ph2params.mode)
 	if err != nil {
 		return
 	}
 
-	envelope.encryptedData, err = envelope.phase2.encrypt(data)
+	envelope.encryptedData, err = envelope.phase2.encrypt(ph2Key, data)
 	if err != nil {
 		return
 	}
-	envelope.plainData = data
 	result, err = cbor.Marshal(*envelope)
-	fmt.Print(string(result))
+	return
+}
+
+func decrypt(ph1key []byte, encryptedContainer []byte) (result []byte, err error) {
+	envelope := Envelope{}
+
+	err = cbor.Unmarshal(encryptedContainer, &envelope)
+	if err != nil {
+		return
+	}
+
+	plainDEK, err := envelope.phase1.decrypt(ph1key, envelope.encryptedDEK)
+	if err != nil {
+		return
+	}
+	result, err = envelope.phase2.decrypt(plainDEK, envelope.encryptedData)
 	return
 }
