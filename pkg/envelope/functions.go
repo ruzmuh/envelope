@@ -65,30 +65,6 @@ func parseBlockModeDecrypter(modeName string, block cipher.Block, iv []byte) (bl
 	return
 }
 
-func parseStreamModeEncrypter(modeName string, block cipher.Block, iv []byte) (streamMode cipher.Stream, err error) {
-	modeName = strings.ToUpper(modeName)
-	switch modeName {
-	case "CTR":
-		streamMode = cipher.NewCTR(block, iv)
-		return
-	default:
-		err = fmt.Errorf("unknown block mode %v", streamMode)
-	}
-	return
-}
-
-func parseStreamModeDecrypter(modeName string, block cipher.Block, iv []byte) (streamMode cipher.Stream, err error) {
-	modeName = strings.ToUpper(modeName)
-	switch modeName {
-	case "CTR":
-		streamMode = cipher.NewCTR(block, iv)
-		return
-	default:
-		err = fmt.Errorf("unknown block mode %v", streamMode)
-	}
-	return
-}
-
 func parsePhaseString(phase string) (result phaseParameterSet, err error) {
 	ph1Slice := strings.Split(phase, "_")
 	if len(ph1Slice) != 3 {
