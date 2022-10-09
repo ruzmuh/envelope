@@ -1,9 +1,11 @@
 package envelope
 
 import (
+	"crypto/cipher"
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type BlockEncrypter struct {
@@ -29,7 +31,6 @@ func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 	if err != nil {
 		return
 	}
-	padedData := padOneAndZeroes(phParam.blockSize/8, data)
 	block, err := parseBlockCipher(phParam.alg, key)
 	if err != nil {
 		return
@@ -38,8 +39,20 @@ func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 	if err != nil {
 		return
 	}
-	result = make([]byte, len(padedData))
-	bm.CryptBlocks(result, padedData)
+
+	switch v := bm.(type) {
+	case cipher.BlockMode:
+		log.Infof("Encryption mode is BlockMode")
+		padedData := padOneAndZeroes(phParam.blockSize/8, data)
+		result = make([]byte, len(padedData))
+		v.CryptBlocks(result, padedData)
+		return
+	case cipher.Stream:
+		log.Infof("Encryption mode is Stream")
+		result = make([]byte, len(data))
+		v.XORKeyStream(result, data)
+		return
+	}
 	return
 }
 
@@ -57,9 +70,19 @@ func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
 	if err != nil {
 		return
 	}
-	result = make([]byte, len(data))
-	bm.CryptBlocks(result, data)
-	result, err = stripOneAndZeroes(phParam.blockSize/8, result)
+	switch v := bm.(type) {
+	case cipher.BlockMode:
+		log.Infof("Decryption mode is Block")
+		result = make([]byte, len(data))
+		v.CryptBlocks(result, data)
+		result, err = stripOneAndZeroes(phParam.blockSize/8, result)
+		return
+	case cipher.Stream:
+		log.Infof("Decryption mode is Stream")
+		result = make([]byte, len(data))
+		v.XORKeyStream(result, data)
+		return
+	}
 	return
 }
 

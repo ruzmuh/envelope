@@ -23,11 +23,20 @@ func parseBlockCipher(blockCipherName string, key []byte) (block cipher.Block, e
 	}
 }
 
-func parseBlockModeEncrypter(modeName string, block cipher.Block, iv []byte) (blockMode cipher.BlockMode, err error) {
+func parseBlockModeEncrypter(modeName string, block cipher.Block, iv []byte) (blockMode interface{}, err error) {
 	modeName = strings.ToUpper(modeName)
 	switch modeName {
 	case "CBC":
 		blockMode = cipher.NewCBCEncrypter(block, iv)
+		return
+	case "CFB":
+		blockMode = cipher.NewCFBEncrypter(block, iv)
+		return
+	case "CTR":
+		blockMode = cipher.NewCTR(block, iv)
+		return
+	case "OFB":
+		blockMode = cipher.NewOFB(block, iv)
 		return
 	default:
 		err = fmt.Errorf("unknown block mode %v", blockMode)
@@ -35,14 +44,47 @@ func parseBlockModeEncrypter(modeName string, block cipher.Block, iv []byte) (bl
 	return
 }
 
-func parseBlockModeDecrypter(modeName string, block cipher.Block, iv []byte) (blockMode cipher.BlockMode, err error) {
+func parseBlockModeDecrypter(modeName string, block cipher.Block, iv []byte) (blockMode interface{}, err error) {
 	modeName = strings.ToUpper(modeName)
 	switch modeName {
 	case "CBC":
 		blockMode = cipher.NewCBCDecrypter(block, iv)
 		return
+	case "CFB":
+		blockMode = cipher.NewCFBDecrypter(block, iv)
+		return
+	case "CTR":
+		blockMode = cipher.NewCTR(block, iv)
+		return
+	case "OFB":
+		blockMode = cipher.NewOFB(block, iv)
+		return
 	default:
 		err = fmt.Errorf("unknown block mode %v", blockMode)
+	}
+	return
+}
+
+func parseStreamModeEncrypter(modeName string, block cipher.Block, iv []byte) (streamMode cipher.Stream, err error) {
+	modeName = strings.ToUpper(modeName)
+	switch modeName {
+	case "CTR":
+		streamMode = cipher.NewCTR(block, iv)
+		return
+	default:
+		err = fmt.Errorf("unknown block mode %v", streamMode)
+	}
+	return
+}
+
+func parseStreamModeDecrypter(modeName string, block cipher.Block, iv []byte) (streamMode cipher.Stream, err error) {
+	modeName = strings.ToUpper(modeName)
+	switch modeName {
+	case "CTR":
+		streamMode = cipher.NewCTR(block, iv)
+		return
+	default:
+		err = fmt.Errorf("unknown block mode %v", streamMode)
 	}
 	return
 }
