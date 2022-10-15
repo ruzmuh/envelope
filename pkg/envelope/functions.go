@@ -66,17 +66,17 @@ func parseBlockModeDecrypter(modeName string, block cipher.Block, iv []byte) (bl
 }
 
 func parsePhaseString(phase string) (result phaseParameterSet, err error) {
-	ph1Slice := strings.Split(phase, "_")
-	if len(ph1Slice) != 3 {
-		err = fmt.Errorf("phase 1 string is %s, must be ALG_SIZE_MODE", phase)
+	phSlice := strings.Split(phase, "_")
+	if len(phSlice) != 3 {
+		err = fmt.Errorf("phase string is %s, must be ALG_SIZE_MODE", phase)
 		return
 	}
-	result.alg = ph1Slice[0]
-	result.blockSize, err = strconv.Atoi(ph1Slice[1])
+	result.alg = phSlice[0]
+	result.blockSize, err = strconv.Atoi(phSlice[1])
 	if err != nil {
 		return
 	}
-	result.mode = ph1Slice[2]
+	result.mode = phSlice[2]
 	return
 }
 
