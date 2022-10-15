@@ -9,33 +9,32 @@ import (
 )
 
 type BlockEncrypter struct {
-	id      string
-	keySize int
-	iv      []byte
+	cipherName string
+	blockSize  int
+	blockMode  string
+	iv         []byte
 }
 
 func NewBlockCipher(cipherName string, blockSize int, blockMode string) (result *BlockEncrypter, err error) {
 	result = &BlockEncrypter{
-		id:      fmt.Sprintf("%s_%v_%s", cipherName, blockSize, blockMode),
-		keySize: blockSize,
-		iv:      getRandomBlock(blockSize / 8),
+		cipherName: cipherName,
+		blockSize:  blockSize,
+		blockMode:  blockMode,
+		iv:         getRandomBlock(blockSize / 8),
 	}
 	return
 }
-func (be *BlockEncrypter) getID() string {
-	return be.id
-}
-func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 
-	phParam, err := parsePhaseString(be.id)
+func (be *BlockEncrypter) getID() string {
+	return fmt.Sprintf("%s_%v_%s", be.cipherName, be.blockSize, be.blockMode)
+}
+
+func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
+	block, err := parseBlockCipher(be.cipherName, key)
 	if err != nil {
 		return
 	}
-	block, err := parseBlockCipher(phParam.alg, key)
-	if err != nil {
-		return
-	}
-	bm, err := parseBlockModeEncrypter(phParam.mode, block, be.iv)
+	bm, err := parseBlockModeEncrypter(be.blockMode, block, be.iv)
 	if err != nil {
 		return
 	}
@@ -43,7 +42,7 @@ func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 	switch v := bm.(type) {
 	case cipher.BlockMode:
 		log.Infof("Encryption mode is BlockMode")
-		padedData := padOneAndZeroes(phParam.blockSize/8, data)
+		padedData := padOneAndZeroes(be.blockSize/8, data)
 		result = make([]byte, len(padedData))
 		v.CryptBlocks(result, padedData)
 		return
@@ -57,16 +56,12 @@ func (be *BlockEncrypter) encrypt(key, data []byte) (result []byte, err error) {
 }
 
 func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
-	phParam, err := parsePhaseString(be.id)
-	if err != nil {
-		return
-	}
 
-	block, err := parseBlockCipher(phParam.alg, key)
+	block, err := parseBlockCipher(be.cipherName, key)
 	if err != nil {
 		return
 	}
-	bm, err := parseBlockModeDecrypter(phParam.mode, block, be.iv)
+	bm, err := parseBlockModeDecrypter(be.blockMode, block, be.iv)
 	if err != nil {
 		return
 	}
@@ -75,7 +70,7 @@ func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
 		log.Infof("Decryption mode is Block")
 		result = make([]byte, len(data))
 		v.CryptBlocks(result, data)
-		result, err = stripOneAndZeroes(phParam.blockSize/8, result)
+		result, err = stripOneAndZeroes(be.blockSize/8, result)
 		return
 	case cipher.Stream:
 		log.Infof("Decryption mode is Stream")
@@ -88,30 +83,34 @@ func (be *BlockEncrypter) decrypt(key, data []byte) (result []byte, err error) {
 
 func (m *BlockEncrypter) MarshalCBOR() (data []byte, err error) {
 	t := struct {
-		Id      string
-		KeySize int
-		Iv      []byte
+		CipherName string
+		BlockSize  int
+		BlockMode  string
+		Iv         []byte
 	}{
-		Id:      m.id,
-		KeySize: m.keySize,
-		Iv:      m.iv,
+		CipherName: m.cipherName,
+		BlockSize:  m.blockSize,
+		BlockMode:  m.blockMode,
+		Iv:         m.iv,
 	}
 	return cbor.Marshal(t)
 }
 
 func (m *BlockEncrypter) UnmarshalCBOR(data []byte) (err error) {
 	var t struct {
-		Id      string
-		KeySize int
-		Iv      []byte
+		CipherName string
+		BlockSize  int
+		BlockMode  string
+		Iv         []byte
 	}
 	if err := cbor.Unmarshal(data, &t); err != nil {
 		return err
 	}
 	*m = BlockEncrypter{
-		id:      t.Id,
-		keySize: t.KeySize,
-		iv:      t.Iv,
+		cipherName: t.CipherName,
+		blockSize:  t.BlockSize,
+		blockMode:  t.BlockMode,
+		iv:         t.Iv,
 	}
 	return
 }

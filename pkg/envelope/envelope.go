@@ -49,10 +49,10 @@ func (m *Envelope) MarshalCBOR() (data []byte, err error) {
 func (m *Envelope) UnmarshalCBOR(data []byte) (err error) {
 	var t struct {
 		Phase1 struct {
-			Id string
+			CipherName string
 		}
 		Phase2 struct {
-			Id string
+			CipherName string
 		}
 	}
 	if err := cbor.Unmarshal(data, &t); err != nil {
@@ -66,19 +66,11 @@ func (m *Envelope) UnmarshalCBOR(data []byte) (err error) {
 		EncryptedData []byte
 	}
 
-	ph1, err := parsePhaseString(t.Phase1.Id)
-	if err != nil {
-		return
-	}
-	if ph1.alg == "AES" {
+	if t.Phase1.CipherName == "AES" {
 		envelope.Phase1 = &BlockEncrypter{}
 	}
 
-	ph2, err := parsePhaseString(t.Phase2.Id)
-	if err != nil {
-		return
-	}
-	if ph2.alg == "AES" {
+	if t.Phase2.CipherName == "AES" {
 		envelope.Phase2 = &BlockEncrypter{}
 	}
 
