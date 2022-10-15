@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -13,7 +13,7 @@ import (
 func main() {
 	optPh1Alg := getopt.StringLong("ph1alg", '1', "AES_128_CBC", "Phase 1 algorithm")
 	optPh2Alg := getopt.StringLong("ph2alg", '2', "AES_128_CBC", "Phase 2 algorithm")
-	// optKEK := getopt.StringLong("kek", 'k', "", "KEK key value")
+	optKEK := getopt.StringLong("kek", 'k', "", "KEK key value in base64 format")
 	optInputFile := getopt.StringLong("in", 'i', "", "Input file to process")
 	optOutputFile := getopt.StringLong("out", 'o', "", "Output file to process")
 	optDecrypt := getopt.BoolLong("decrypt", 'd', "whether to decrypt")
@@ -25,10 +25,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	key, err := hex.DecodeString("56e47a38c5598974bc46903dba290349")
-	if err != nil {
-		panic(err)
-	}
 	dat, err := os.ReadFile(*optInputFile)
 	if err != nil {
 		panic("cant open file: " + err.Error())
@@ -41,6 +37,10 @@ func main() {
 
 	defer f.Close()
 
+	key, err := base64.StdEncoding.DecodeString(*optKEK)
+	if err != nil {
+		panic("can't decode key: " + err.Error())
+	}
 	if *optDecrypt {
 		fmt.Println("Decrypt")
 		result, err := envelope.Decrypt(key, dat)
