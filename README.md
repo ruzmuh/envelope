@@ -5,7 +5,7 @@ It's kind a envelope encryption implementation written on go. The project includ
 ## Installation
 Install a package:
 ```
-go get github.com/ruzmuh/envelope/pkg/envelope
+go get github.com/ruzmuh/envelope
 ```
 Install a cmd tool:
 ```
